@@ -185,6 +185,7 @@ async function loadQuestion() {
 function buildQuestionUrl() {
   // JSTQB FL Phase 1: 常にランダム出題。category_id は将来の拡張候補
   const params = new URLSearchParams({ random: 'true' });
+  state.sessionExcludeIds.forEach(id => params.append('exclude_ids', id));
   return `/api/v1/questions?${params.toString()}`;
 }
 

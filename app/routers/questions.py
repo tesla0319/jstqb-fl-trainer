@@ -32,12 +32,14 @@ def list_questions(
     category_id: int | None = Query(default=None),
     random: bool = Query(default=False),
     limit: int = Query(default=config.DEFAULT_QUESTION_LIMIT, ge=1),
+    exclude_ids: list[int] = Query(default=[]),
     db: Session = Depends(get_db),
 ):
     """問題一覧を取得する。
 
     - random=true のとき limit を無視して1問をランダムに返す。
     - category_id 指定時は config から名称を引いてカテゴリで絞り込む。
+    - exclude_ids 指定時はそれらの問題IDを除外してランダム取得する。
     - 対象問題が0件の場合は {"questions": []} を返す（404 ではない）。
     """
     category_name = _resolve_category_name(category_id)
@@ -46,7 +48,7 @@ def list_questions(
         return QuestionsListResponse(questions=[])
 
     if random:
-        question = get_random_question(db, category=category_name)
+        question = get_random_question(db, category=category_name, exclude_ids=exclude_ids or None)
         questions = [question] if question else []
     else:
         questions = get_questions(db, category=category_name, limit=limit)
