@@ -243,15 +243,23 @@ Phase 1 では 10 問を用意する。
 
 ### 4.4 DBテーブル定義
 
+> **Phase 1 の DB 方針**
+>
+> - `categories` テーブルは作成しない。カテゴリ一覧は `config.JSTQB_CATEGORIES` から返す。
+> - `questions.category` 文字列でカテゴリを管理する既存方式を維持する（正規化は Phase 2 以降）。
+> - `choices.display_order` は既存カラム名をそのまま使用する（`order_num` への改名は行わない）。
+
 #### questions テーブル
 
 | カラム名 | 型 | NOT NULL | 説明 |
 |---------|----|----------|------|
 | id | INTEGER | ✅ | 主キー（AUTO INCREMENT） |
-| category_id | INTEGER | ✅ | カテゴリ ID（FK: categories.id） |
+| category | TEXT | ✅ | カテゴリ名文字列（`config.JSTQB_CATEGORIES` の name と一致させる） |
 | difficulty | INTEGER | ✅ | 難易度（1 / 2 / 3） |
 | question_text | TEXT | ✅ | 問題文 |
+| multi_select_count | INTEGER | ✅ | 選択数（Phase 1 では常に 1。既存ロジックとの後方互換のため維持） |
 | explanation | TEXT | ✅ | 解説文 |
+| trap_reason | TEXT | ❌ | 間違えやすいポイント（NULL 可） |
 | created_at | DATETIME | ✅ | 作成日時 |
 
 #### choices テーブル
@@ -262,14 +270,23 @@ Phase 1 では 10 問を用意する。
 | question_id | INTEGER | ✅ | 問題 ID（FK: questions.id） |
 | choice_text | TEXT | ✅ | 選択肢テキスト |
 | is_correct | BOOLEAN | ✅ | 正解フラグ（1問につき1つのみ true） |
-| order_num | INTEGER | ✅ | 選択肢の表示順（1〜4）。**Phase 1 ではシャッフルせず昇順固定で表示する** |
+| display_order | INTEGER | ✅ | 選択肢の表示順（1〜4）。**Phase 1 ではシャッフルせず昇順固定で表示する** |
 
 #### categories テーブル
 
-| カラム名 | 型 | NOT NULL | 説明 |
-|---------|----|----------|------|
-| id | INTEGER | ✅ | 主キー |
-| name | TEXT | ✅ | カテゴリ名 |
+Phase 1 では **作成しない**。カテゴリ一覧は `app/config.py` の `JSTQB_CATEGORIES` 定数から返す。
+
+```python
+# config.py
+JSTQB_CATEGORIES = [
+    {"id": 1, "name": "テストの基礎"},
+    {"id": 2, "name": "テスト活動とプロセス"},
+    {"id": 3, "name": "静的テスト"},
+    {"id": 4, "name": "テスト技法"},
+    {"id": 5, "name": "テストマネジメント"},
+    {"id": 6, "name": "ツール支援"},
+]
+```
 
 > **`choices.is_correct` の制約方針**
 >
@@ -358,20 +375,21 @@ Phase 1 では出題済み問題の履歴を保持しない。
   "questions": [
     {
       "id": 1,
-      "category_id": 1,
       "category_name": "テストの基礎",
       "difficulty": 2,
       "question_text": "ソフトウェアテストの主な目的として最も適切なものはどれか。",
       "choices": [
-        { "id": 1, "choice_text": "バグを完全になくすこと", "order_num": 1 },
-        { "id": 2, "choice_text": "欠陥を発見すること", "order_num": 2 },
-        { "id": 3, "choice_text": "ソフトウェアを動作させること", "order_num": 3 },
-        { "id": 4, "choice_text": "開発を高速化すること", "order_num": 4 }
+        { "id": 1, "choice_text": "バグを完全になくすこと", "display_order": 1 },
+        { "id": 2, "choice_text": "欠陥を発見すること", "display_order": 2 },
+        { "id": 3, "choice_text": "ソフトウェアを動作させること", "display_order": 3 },
+        { "id": 4, "choice_text": "開発を高速化すること", "display_order": 4 }
       ]
     }
   ]
 }
 ```
+
+> **Phase 1 実装メモ**: レスポンスフィールドは `category_name`（`questions.category` 文字列から生成）と `display_order`（`choices.display_order` カラムをそのまま使用）。`category_id` はレスポンスには含まない。
 
 > **注意**: `choices` には `is_correct` を含めない。  
 > 理由: 出題時点でクライアントに正解を渡さないため。ブラウザの通信内容（DevTools 等）から正解が見える状態を避ける。  
@@ -543,4 +561,5 @@ Phase 2 以降で検討する機能を整理する。現時点では設計・実
 | 1.0.0 | 2026-05-31 | 初版作成 |
 | 1.1.0 | 2026-05-31 | 確認事項を反映: 問題配分確定・`is_correct` 制約方針明記・0件時に空配列返却・400エラー追加・テスト観点を必須 / seed品質 / 補足に再整理 |
 | 1.2.0 | 2026-05-31 | 複数選択方針を確定: E-06（複数選択問題追加）を削除。E-09（旧）をE-08に繰り上げ、「Phase2で削除する」旨を明記。拡張候補から複数選択問題の追加を除外 |
-| 1.3.0 | 2026-05-31 | `random=true` は `limit` 無視で1問返す仕様を明記。出題済み問題の再出題を許容する旨を追記。選択肢表示順を `order_num` 昇順固定に明記。DB ファイルパスを `app.db`（既存構成）に修正 |
+| 1.3.0 | 2026-05-31 | `random=true` は `limit` 無視で1問返す仕様を明記。出題済み問題の再出題を許容する旨を追記。選択肢表示順を `display_order` 昇順固定に明記。DB ファイルパスを `app.db`（既存構成）に修正 |
+| 1.4.0 | 2026-05-31 | Phase 1 実装に合わせて §4.4 を修正。`categories` テーブル廃止・`questions.category` 文字列管理・`choices.display_order` 維持・`category_id` をレスポンスから除外・`category_name` で返す方式を明記 |
