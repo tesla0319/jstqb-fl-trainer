@@ -50,6 +50,16 @@ def get_question_by_id(db: Session, question_id: int) -> Question | None:
     return db.query(Question).filter(Question.id == question_id).first()
 
 
+def get_category_counts(db: Session) -> dict[str, int]:
+    """カテゴリ別の登録問題数を返す。"""
+    rows = (
+        db.query(Question.category, func.count(Question.id))
+        .group_by(Question.category)
+        .all()
+    )
+    return {row[0]: row[1] for row in rows}
+
+
 def get_choice_by_id(db: Session, choice_id: int) -> Choice | None:
     """ID で選択肢を取得する（JSTQB FL /api/v1/answers 用）。"""
     return db.query(Choice).filter(Choice.id == choice_id).first()

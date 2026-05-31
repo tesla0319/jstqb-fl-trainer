@@ -35,12 +35,14 @@ const state = {
   view: 'quiz',  // 'quiz' | 'result' | 'stats' | 'training-result'
 
   // 40問トレーニング セッション状態
-  trainingCount:     0,   // 現セッションの回答数 (0–40)
-  trainingCorrect:   0,   // 正答数
-  trainingLog:       [],  // [{category, is_correct}, ...] 直近40問（テーマ判定に使用）
-  trainingCatCounts: {},  // normal mode 偏り抑制: { 'VIEW': 2, ... }
-  trainingLastCats:  [],  // 3連続チェック用: 直近2カテゴリ
-  trainingFinished:  false, // 40問完了フラグ（btn-next の動作切替に使用）
+  trainingCount:          0,    // 現セッションの回答数 (0–40)
+  trainingCorrect:        0,    // 正答数
+  trainingLog:            [],   // [{category, is_correct}, ...] 直近40問（テーマ判定に使用）
+  trainingCatCounts:      {},   // normal mode 偏り抑制: { カテゴリ名: 回答数 }
+  trainingLastCats:       [],   // 3連続チェック用: 直近2カテゴリ
+  trainingFinished:       false, // 40問完了フラグ（btn-next の動作切替に使用）
+  trainingCategoryQuota:  {},   // normal mode: {category_id: 残り出題枠} 比例配分
+  pendingCategoryId:      null, // 現在出題中の category_id（クォータ消費用）
 };
 
 /* ==========================================================
@@ -83,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (saved) {
     state.userName = saved;
     updateUserDisplay();
-    loadQuestion();
+    initCategoryQuota().then(() => loadQuestion());
   } else {
     showUsernameSection();
   }
@@ -114,7 +116,7 @@ function onSetUsername() {
   state.userName = name;
   localStorage.setItem(LS_USER_NAME, name);
   updateUserDisplay();
-  loadQuestion();
+  initCategoryQuota().then(() => loadQuestion());
 }
 
 function updateUserDisplay() {
@@ -129,14 +131,18 @@ function setMode(mode) {
   el('btn-normal').classList.toggle('active', mode === 'normal');
   el('btn-weak').classList.toggle('active',   mode === 'weak');
   el('btn-review').classList.toggle('active', mode === 'review');
-  resetTrainingSession();  // モード切替 = 新しい10問セッション開始
-  loadQuestion();
+  resetTrainingSession();
+  if (mode === 'normal') {
+    initCategoryQuota().then(() => loadQuestion());
+  } else {
+    loadQuestion();
+  }
 }
 
 /* ==========================================================
    問題取得・表示
    ========================================================== */
-async function loadQuestion() {
+async function loadQuestion(retryCount = 0) {
   // normal mode = session テーマを復元、weak/review = normal 固定（補助学習空間）
   if (state.mode === 'normal') {
     restoreSessionTheme();
@@ -162,6 +168,13 @@ async function loadQuestion() {
     const data = await res.json();
     const questions = data.questions;
     if (!questions || questions.length === 0) {
+      // normal mode でカテゴリ指定あり → そのカテゴリを枯渇扱いにして再試行
+      if (state.mode === 'normal' && state.pendingCategoryId !== null && retryCount < 6) {
+        state.trainingCategoryQuota[state.pendingCategoryId] = 0;
+        state.pendingCategoryId = null;
+        await loadQuestion(retryCount + 1);
+        return;
+      }
       throw new Error('問題が見つかりませんでした');
     }
     state.question = questions[0];
@@ -183,9 +196,20 @@ async function loadQuestion() {
 }
 
 function buildQuestionUrl() {
-  // JSTQB FL Phase 1: 常にランダム出題。category_id は将来の拡張候補
   const params = new URLSearchParams({ random: 'true' });
   state.sessionExcludeIds.forEach(id => params.append('exclude_ids', id));
+  // normal mode かつ配分クォータあり → カテゴリ指定で出題
+  if (state.mode === 'normal' && Object.keys(state.trainingCategoryQuota).length > 0) {
+    const catId = selectNextCategory();
+    if (catId !== null) {
+      params.set('category_id', catId);
+      state.pendingCategoryId = catId;
+    } else {
+      state.pendingCategoryId = null;
+    }
+  } else {
+    state.pendingCategoryId = null;
+  }
   return `/api/v1/questions?${params.toString()}`;
 }
 
@@ -201,6 +225,50 @@ function getBannedCategories() {
     if (a === b) banned.add(a);
   }
   return [...banned];
+}
+
+/* ----------------------------------------------------------
+   カテゴリ配分（normal mode）
+   ---------------------------------------------------------- */
+
+/**
+ * 最大剰余法で問題バンクのカテゴリ比率を sessionSize 問に配分する。
+ * @param {Array<{id:number, count:number}>} categories
+ * @param {number} sessionSize
+ * @returns {{[categoryId:number]: number}}
+ */
+function distributeQuota(categories, sessionSize) {
+  const pool = categories.reduce((s, c) => s + c.count, 0);
+  if (pool === 0) return {};
+  const items = categories.map(c => {
+    const exact = c.count / pool * sessionSize;
+    return { id: c.id, floor: Math.floor(exact), rem: exact - Math.floor(exact) };
+  });
+  const deficit = sessionSize - items.reduce((s, i) => s + i.floor, 0);
+  items.sort((a, b) => b.rem - a.rem || a.id - b.id);
+  items.forEach((item, idx) => { item.quota = item.floor + (idx < deficit ? 1 : 0); });
+  return Object.fromEntries(items.map(i => [i.id, i.quota]));
+}
+
+/** クォータ残りがある category_id をランダムに1つ選ぶ。なければ null。 */
+function selectNextCategory() {
+  const available = Object.entries(state.trainingCategoryQuota)
+    .filter(([, quota]) => quota > 0)
+    .map(([id]) => Number(id));
+  if (available.length === 0) return null;
+  return available[Math.floor(Math.random() * available.length)];
+}
+
+/** /api/v1/categories からバンク件数を取得して配分を計算する（normal mode 専用）。 */
+async function initCategoryQuota() {
+  if (state.mode !== 'normal') return;
+  try {
+    const res  = await fetch('/api/v1/categories');
+    const data = await res.json();
+    state.trainingCategoryQuota = distributeQuota(data.categories, 40);
+  } catch (_) {
+    state.trainingCategoryQuota = {};
+  }
 }
 
 function renderQuestion() {
@@ -355,11 +423,15 @@ function updateTrainingState(is_correct) {
   state.trainingLog.push({ category: cat, is_correct });
   if (state.trainingLog.length > 40) state.trainingLog.shift();
 
-  // normal mode: カテゴリ偏り抑制のための追跡
+  // normal mode: カテゴリ偏り抑制のための追跡 + クォータ消費
   if (state.mode === 'normal') {
     state.trainingCatCounts[cat] = (state.trainingCatCounts[cat] || 0) + 1;
     state.trainingLastCats.push(cat);
     if (state.trainingLastCats.length > 2) state.trainingLastCats.shift();
+    if (state.pendingCategoryId !== null) {
+      const q = state.trainingCategoryQuota[state.pendingCategoryId] || 0;
+      state.trainingCategoryQuota[state.pendingCategoryId] = Math.max(0, q - 1);
+    }
   }
 
   if (state.trainingCount >= 40) {
@@ -419,17 +491,19 @@ function showTrainingResult() {
 }
 
 function resetTrainingSession() {
-  state.trainingCount     = 0;
-  state.trainingCorrect   = 0;
-  state.trainingLog       = [];
-  state.trainingCatCounts = {};
-  state.trainingLastCats  = [];
-  state.trainingFinished  = false;
-  state.sessionExcludeIds = new Set();
-  state.lastQuestionId    = null;
-  state.sessionAnswered   = 0;
-  state.sessionCorrect    = 0;
-  state.streak            = 0;
+  state.trainingCount          = 0;
+  state.trainingCorrect        = 0;
+  state.trainingLog            = [];
+  state.trainingCatCounts      = {};
+  state.trainingLastCats       = [];
+  state.trainingFinished       = false;
+  state.sessionExcludeIds      = new Set();
+  state.lastQuestionId         = null;
+  state.sessionAnswered        = 0;
+  state.sessionCorrect         = 0;
+  state.streak                 = 0;
+  state.trainingCategoryQuota  = {};
+  state.pendingCategoryId      = null;
   updateSessionStats();
   // btn-next テキストをデフォルトに戻す
   el('btn-next').innerHTML = '次の問題へ <span class="key-hint">Enter</span>';
@@ -445,7 +519,11 @@ function onNextClick() {
 
 function onRetry() {
   resetTrainingSession();
-  loadQuestion();
+  if (state.mode === 'normal') {
+    initCategoryQuota().then(() => loadQuestion());
+  } else {
+    loadQuestion();
+  }
 }
 
 function onEnd() {

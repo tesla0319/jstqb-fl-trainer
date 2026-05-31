@@ -152,3 +152,19 @@ class TestGetCategories:
         for cat in res.json()["categories"]:
             assert "id" in cat
             assert "name" in cat
+
+    def test_category_has_count(self, client):
+        """各カテゴリに count フィールドが含まれ、0以上の整数である。"""
+        res = client.get("/api/v1/categories")
+        assert res.status_code == 200
+        for cat in res.json()["categories"]:
+            assert "count" in cat, f"count が存在しない: {cat}"
+            assert isinstance(cat["count"], int), f"count が整数でない: {cat}"
+            assert cat["count"] >= 0, f"count が負数: {cat}"
+
+    def test_category_count_reflects_seeded_db(self, client, seeded_db):
+        """seeded_db では count が0より大きい値を返す。"""
+        res = client.get("/api/v1/categories")
+        assert res.status_code == 200
+        total = sum(c["count"] for c in res.json()["categories"])
+        assert total > 0, "seeded_db のカテゴリ count 合計が 0"
