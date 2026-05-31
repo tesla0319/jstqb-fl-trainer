@@ -7,8 +7,8 @@ const MIN_ANSWERS    = 3;
 const WEAK_THRESHOLD = 0.5;
 
 /* localStorage キー */
-const LS_USER_NAME = 'sql_silver_user_name';
-const LS_THEME     = 'sql_silver_theme';
+const LS_USER_NAME = 'jstqb_user_name';
+const LS_THEME     = 'jstqb_theme';
 
 /* ==========================================================
    状態管理
@@ -159,14 +159,15 @@ async function loadQuestion() {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.detail ?? `HTTP ${res.status}`);
     }
-    state.question = await res.json();
+    const data = await res.json();
+    const questions = data.questions;
+    if (!questions || questions.length === 0) {
+      throw new Error('問題が見つかりませんでした');
+    }
+    state.question = questions[0];
 
-    // セッション完了検知:
-    // 返ってきた question.id が sessionExcludeIds に含まれている
-    // → 全問消化してAPIがフォールバック → セッションリセット
     if (state.sessionExcludeIds.has(state.question.id)) {
       state.sessionExcludeIds = new Set();
-      // 直前問題のみ残して連続出題を防ぐ
       if (state.lastQuestionId !== null) {
         state.sessionExcludeIds.add(state.lastQuestionId);
       }
@@ -182,14 +183,9 @@ async function loadQuestion() {
 }
 
 function buildQuestionUrl() {
-  const params = new URLSearchParams({ mode: state.mode, user_name: state.userName });
-  // セッション除外IDを全て exclude_ids として送信（同一問題の再出題防止）
-  state.sessionExcludeIds.forEach(id => params.append('exclude_ids', id));
-  // normal mode のみカテゴリ偏り抑制を適用
-  if (state.mode === 'normal') {
-    getBannedCategories().forEach(cat => params.append('excluded_categories', cat));
-  }
-  return `/api/questions/random?${params.toString()}`;
+  // JSTQB FL Phase 1: 常にランダム出題。category_id は将来の拡張候補
+  const params = new URLSearchParams({ random: 'true' });
+  return `/api/v1/questions?${params.toString()}`;
 }
 
 function getBannedCategories() {
@@ -209,24 +205,14 @@ function getBannedCategories() {
 function renderQuestion() {
   const q = state.question;
 
-  el('category-badge').textContent   = q.category;
+  el('category-badge').textContent   = q.category_name;
   el('difficulty-badge').textContent = difficultyStars(q.difficulty);
   renderModeBadge();
-
-  // 複数選択ヒント
-  const hint = el('select-hint');
-  if (q.multi_select_count > 1) {
-    hint.textContent = `${q.multi_select_count}つ選んでください`;
-    hint.hidden = false;
-  } else {
-    hint.hidden = true;
-  }
 
   el('question-text').textContent = q.question_text;
 
   const choicesEl = el('choices');
   choicesEl.textContent = '';
-  choicesEl.classList.toggle('is-multi', q.multi_select_count > 1);
   q.choices.forEach(c => choicesEl.appendChild(buildChoiceEl(c.id, c.choice_text)));
 
   el('question-card').hidden = false;
@@ -267,14 +253,9 @@ function buildChoiceEl(id, text) {
 }
 
 function onChoiceClick(id) {
-  const isMulti = state.question.multi_select_count > 1;
-  if (!isMulti) {
-    state.selectedIds.clear();
-    state.selectedIds.add(id);
-  } else {
-    if (state.selectedIds.has(id)) state.selectedIds.delete(id);
-    else                           state.selectedIds.add(id);
-  }
+  // JSTQB FL は常に単一選択
+  state.selectedIds.clear();
+  state.selectedIds.add(id);
 
   document.querySelectorAll('.choice').forEach(c => {
     c.classList.toggle('is-selected', state.selectedIds.has(Number(c.dataset.id)));
@@ -284,17 +265,10 @@ function onChoiceClick(id) {
 }
 
 function updateSubmitButton() {
-  const q     = state.question;
   const count = state.selectedIds.size;
   const btn   = el('btn-submit');
-
-  btn.disabled = (count === 0);
-
-  if (q && q.multi_select_count > 1 && count > 0) {
-    btn.textContent = `回答する（${count} / ${q.multi_select_count} 選択中）`;
-  } else {
-    btn.textContent = '回答する';
-  }
+  btn.disabled    = (count === 0);
+  btn.textContent = '回答する';
 }
 
 /* ==========================================================
@@ -304,13 +278,12 @@ async function submitAnswer() {
   el('btn-submit').disabled = true;
 
   try {
-    const res = await fetch('/api/answers', {
+    const res = await fetch('/api/v1/answers', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({
-        question_id:         state.question.id,
-        selected_choice_ids: [...state.selectedIds],
-        user_name:           state.userName,
+        question_id: state.question.id,
+        choice_id:   [...state.selectedIds][0],
       }),
     });
 
@@ -345,13 +318,13 @@ async function submitAnswer() {
 }
 
 function applyResultHighlights(result) {
-  const correctSet = new Set(result.correct_choice_ids);
+  const correctId = result.correct_choice_id;
 
   document.querySelectorAll('.choice').forEach(c => {
     const id = Number(c.dataset.id);
     c.classList.add('is-answered');
-    if (correctSet.has(id))               c.classList.add('is-correct');
-    else if (state.selectedIds.has(id))   c.classList.add('is-wrong');
+    if (id === correctId)               c.classList.add('is-correct');
+    else if (state.selectedIds.has(id)) c.classList.add('is-wrong');
   });
 
   el('btn-submit').hidden = true;
@@ -364,14 +337,6 @@ function renderResult(result) {
 
   el('explanation').innerHTML = result.explanation;
 
-  const trapBox = el('trap-reason-box');
-  if (result.trap_reason) {
-    el('trap-reason-text').textContent = result.trap_reason;
-    trapBox.hidden = false;
-  } else {
-    trapBox.hidden = true;
-  }
-
   setView('result');
   el('section-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -380,7 +345,7 @@ function renderResult(result) {
    10問トレーニング制御
    ========================================================== */
 function updateTrainingState(is_correct) {
-  const cat = state.question.category;
+  const cat = state.question.category_name;
 
   state.trainingCount++;
   if (is_correct) state.trainingCorrect++;

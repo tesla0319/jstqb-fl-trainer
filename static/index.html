@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SQL Silver 学習支援</title>
+  <title>JSTQB FL 学習支援</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -12,7 +12,7 @@
     <!-- ヘッダー: 常時表示 -->
     <header class="header">
       <div class="header-top">
-        <h1 class="app-title">SQL Silver 学習支援</h1>
+        <h1 class="app-title">JSTQB FL 学習支援</h1>
         <!-- ユーザー表示: localStorage から取得したニックネームを表示 -->
         <span id="user-display" class="user-display"></span>
         <!-- セッション統計: 回答後に更新される -->
@@ -64,9 +64,6 @@
             <span id="mode-badge" class="badge badge-mode" hidden></span>
           </div>
 
-          <!-- 複数選択ヒント（multi_select_count > 1 のみ表示） -->
-          <div id="select-hint" class="select-hint" hidden></div>
-
           <!-- 問題文（textContent でレンダリング: XSS 対策） -->
           <p id="question-text" class="question-text"></p>
 
@@ -86,14 +83,7 @@
         <div class="card">
           <h2 class="card-heading">解説</h2>
           <!-- explanation は開発者が登録したコンテンツのため innerHTML でレンダリング -->
-          <!-- question_text / choice_text / trap_reason は textContent を使用 -->
           <div id="explanation" class="explanation"></div>
-
-          <!-- 間違えやすいポイント（trap_reason がある場合のみ表示） -->
-          <div id="trap-reason-box" class="trap-reason" hidden>
-            <span class="trap-label">⚠ 間違えやすいポイント</span>
-            <p id="trap-reason-text" class="trap-body"></p>
-          </div>
         </div>
 
         <!-- Enter キーショートカットのヒントを表示 -->

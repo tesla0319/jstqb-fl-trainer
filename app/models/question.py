@@ -8,20 +8,14 @@ from app.database import Base
 
 
 class Question(Base):
-    """問題テーブル: SQL Silver 試験の各問題を格納する。
-
-    設計判断:
-    - category に INDEX を付与: 苦手分析クエリで GROUP BY するため
-    - multi_select_count: 「2つ選べ」「3つ選べ」に対応するための選択数定義
-    - trap_reason は NULL 可: すべての問題に記述が難しいケースを想定
-    """
-
     __tablename__ = "questions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    # JSTQB FL ではカテゴリ名文字列で管理（正規化はPhase 2以降）
     category: Mapped[str] = mapped_column(Text, nullable=False, index=True)
     difficulty: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     question_text: Mapped[str] = mapped_column(Text, nullable=False)
+    # Phase 1 では常に 1（JSTQB FL は単一選択のみ）。既存ロジックとの後方互換のため残す
     multi_select_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     explanation: Mapped[str] = mapped_column(Text, nullable=False)
     trap_reason: Mapped[str | None] = mapped_column(Text, nullable=True)

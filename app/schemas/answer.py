@@ -1,19 +1,37 @@
-"""回答送信リクエスト / レスポンスの Pydantic スキーマ。"""
+"""回答送信リクエスト / レスポンスの Pydantic スキーマ。
+
+JSTQB FL 版（/api/v1/answers）と旧 SQL Silver 版（/api/answers）の両方を定義する。
+"""
 
 from pydantic import BaseModel, Field, field_validator
 
 
+# ── JSTQB FL 版（単一選択） ────────────────────────────────────────
+
 class AnswerRequest(BaseModel):
     question_id: int
-    # min_length=1 で空リストを 422 として弾く
+    choice_id: int
+
+
+class AnswerResponse(BaseModel):
+    is_correct: bool
+    correct_choice_id: int
+    correct_choice_text: str
+    selected_choice_id: int
+    selected_choice_text: str
+    explanation: str
+
+
+# ── 旧 SQL Silver 版（複数選択対応、後方互換） ─────────────────────
+
+class LegacyAnswerRequest(BaseModel):
+    question_id: int
     selected_choice_ids: list[int] = Field(min_length=1)
-    # user_name: デフォルト "guest"。前後空白は strip、空白のみは 422
     user_name: str = Field(default="guest", min_length=1, max_length=50)
 
     @field_validator("selected_choice_ids")
     @classmethod
     def no_duplicates(cls, v: list[int]) -> list[int]:
-        """重複した choice_id を 422 として弾く（仕様確定事項 #1）。"""
         if len(v) != len(set(v)):
             raise ValueError("selected_choice_ids must not contain duplicates")
         return v
@@ -21,14 +39,13 @@ class AnswerRequest(BaseModel):
     @field_validator("user_name")
     @classmethod
     def strip_and_reject_blank(cls, v: str) -> str:
-        """前後空白を除去し、空白のみは 422 として弾く。"""
         v = v.strip()
         if not v:
             raise ValueError("user_name must not be empty or whitespace only")
         return v
 
 
-class AnswerResponse(BaseModel):
+class LegacyAnswerResponse(BaseModel):
     is_correct: bool
     correct_choice_ids: list[int]
     explanation: str

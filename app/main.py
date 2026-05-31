@@ -4,14 +4,13 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.routers import questions, answers, stats
+from app.routers import answers, categories, questions, stats
 from app.seed.init_db import create_tables, seed_questions
 from app.database import SessionLocal
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 起動時: テーブル作成（冪等）+ seed 投入（冪等）
     create_tables()
     db = SessionLocal()
     try:
@@ -22,27 +21,30 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="SQL Silver 学習支援アプリ",
-    description="SQL Silver 試験のルール・制約・用語理解を強化する学習支援 Web アプリ",
+    title="JSTQB FL 学習支援アプリ",
+    description="JSTQB Foundation Level 試験の学習を支援する Web アプリ",
     lifespan=lifespan,
 )
 
-# API ルーターを先に登録し、/api/* へのリクエストが静的ファイルに干渉しないようにする
+# JSTQB FL 新 API
+app.include_router(categories.router)
 app.include_router(questions.router)
 app.include_router(answers.router)
+
+# 旧 SQL Silver API（後方互換で維持）
+app.include_router(questions.legacy_router)
+app.include_router(answers.legacy_router)
+
 app.include_router(stats.router)
 
-# 静的ファイル（CSS・JS）は /static/* で配信
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.get("/health")
 def health_check():
-    """起動確認用ヘルスチェックエンドポイント。"""
     return {"status": "ok"}
 
 
 @app.get("/", include_in_schema=False)
 def serve_index():
-    """フロントエンドのエントリポイント。"""
     return FileResponse("static/index.html")

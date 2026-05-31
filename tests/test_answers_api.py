@@ -1,181 +1,109 @@
-"""POST /api/answers および DELETE /api/answers のAPIテスト。"""
-
-import app.config
-from app.models.user_answer import UserAnswer
+"""POST /api/v1/answers のAPIテスト（JSTQB FL 版: 単一選択）。"""
 
 
 class TestSubmitAnswer:
 
     # ---- 正常系 ----
 
-    def test_single_correct(self, client, seeded_db):
-        """単一選択・正解 → is_correct=True。"""
-        response = client.post("/api/answers", json={
+    def test_correct_answer_returns_true(self, client, seeded_db):
+        """正解の choice_id を送信すると is_correct=True が返る。"""
+        res = client.post("/api/v1/answers", json={
             "question_id": seeded_db["q1_id"],
-            "selected_choice_ids": [seeded_db["q1_correct_choice_id"]],
+            "choice_id":   seeded_db["q1_correct_choice_id"],
         })
-        assert response.status_code == 200
-        assert response.json()["is_correct"] is True
+        assert res.status_code == 200
+        assert res.json()["is_correct"] is True
 
-    def test_single_incorrect(self, client, seeded_db):
-        """単一選択・不正解 → is_correct=False。"""
-        response = client.post("/api/answers", json={
+    def test_incorrect_answer_returns_false(self, client, seeded_db):
+        """不正解の choice_id を送信すると is_correct=False が返る。"""
+        res = client.post("/api/v1/answers", json={
             "question_id": seeded_db["q1_id"],
-            "selected_choice_ids": [seeded_db["q1_incorrect_choice_id"]],
+            "choice_id":   seeded_db["q1_incorrect_choice_id"],
         })
-        assert response.status_code == 200
-        assert response.json()["is_correct"] is False
+        assert res.status_code == 200
+        assert res.json()["is_correct"] is False
 
-    def test_multi_all_correct(self, client, seeded_db):
-        """複数選択・完全一致 → is_correct=True。"""
-        response = client.post("/api/answers", json={
-            "question_id": seeded_db["q2_id"],
-            "selected_choice_ids": seeded_db["q2_correct_choice_ids"],
-        })
-        assert response.status_code == 200
-        assert response.json()["is_correct"] is True
-
-    def test_multi_partial_correct(self, client, seeded_db):
-        """複数選択・部分一致 → is_correct=False（部分点なし）。"""
-        correct_ids = seeded_db["q2_correct_choice_ids"]
-        response = client.post("/api/answers", json={
-            "question_id": seeded_db["q2_id"],
-            "selected_choice_ids": [correct_ids[0], seeded_db["q2_incorrect_choice_id"]],
-        })
-        assert response.status_code == 200
-        assert response.json()["is_correct"] is False
-
-    def test_response_contains_explanation(self, client, seeded_db):
-        """レスポンスに explanation と correct_choice_ids が含まれる。"""
-        response = client.post("/api/answers", json={
+    def test_response_contains_required_fields(self, client, seeded_db):
+        """レスポンスに必須フィールドが含まれる。"""
+        res = client.post("/api/v1/answers", json={
             "question_id": seeded_db["q1_id"],
-            "selected_choice_ids": [seeded_db["q1_correct_choice_id"]],
+            "choice_id":   seeded_db["q1_correct_choice_id"],
         })
-        data = response.json()
+        data = res.json()
+        assert "is_correct" in data
+        assert "correct_choice_id" in data
+        assert "correct_choice_text" in data
+        assert "selected_choice_id" in data
+        assert "selected_choice_text" in data
         assert "explanation" in data
-        assert "correct_choice_ids" in data
-        assert "trap_reason" in data
 
-    # ---- 異常系 ----
+    def test_selected_choice_matches_sent_choice(self, client, seeded_db):
+        """selected_choice_id がリクエストの choice_id と一致する。"""
+        cid = seeded_db["q1_incorrect_choice_id"]
+        res = client.post("/api/v1/answers", json={
+            "question_id": seeded_db["q1_id"],
+            "choice_id":   cid,
+        })
+        assert res.status_code == 200
+        assert res.json()["selected_choice_id"] == cid
 
-    def test_nonexistent_question_returns_404(self, client, seeded_db):
-        """存在しない question_id → 404。"""
-        response = client.post("/api/answers", json={
+    # ---- 異常系: 404 ----
+
+    def test_nonexistent_question_id_returns_404(self, client, seeded_db):
+        """存在しない question_id は 404。"""
+        res = client.post("/api/v1/answers", json={
             "question_id": 99999,
-            "selected_choice_ids": [seeded_db["q1_correct_choice_id"]],
+            "choice_id":   seeded_db["q1_correct_choice_id"],
         })
-        assert response.status_code == 404
+        assert res.status_code == 404
 
-    def test_empty_choice_ids_returns_422(self, client, seeded_db):
-        """空の selected_choice_ids → 422。"""
-        response = client.post("/api/answers", json={
+    def test_nonexistent_choice_id_returns_404(self, client, seeded_db):
+        """存在しない choice_id は 404。"""
+        res = client.post("/api/v1/answers", json={
             "question_id": seeded_db["q1_id"],
-            "selected_choice_ids": [],
+            "choice_id":   99999,
         })
-        assert response.status_code == 422
+        assert res.status_code == 404
 
-    def test_invalid_choice_id_returns_422(self, client, seeded_db):
-        """問題に属さない choice_id → 422。"""
-        response = client.post("/api/answers", json={
+    # ---- 異常系: 400 ----
+
+    def test_cross_question_choice_returns_400(self, client, seeded_db):
+        """他の問題に属する choice_id を送ると 400。"""
+        res = client.post("/api/v1/answers", json={
             "question_id": seeded_db["q1_id"],
-            "selected_choice_ids": [seeded_db["q2_choice_id_for_cross_question_test"]],
+            "choice_id":   seeded_db["q2_choice_for_cross_test"],
         })
-        assert response.status_code == 422
+        assert res.status_code == 400
+        assert "choice_id does not belong" in res.json()["detail"]
 
-    def test_duplicate_choice_ids_returns_422(self, client, seeded_db):
-        """重複した choice_id を含む → 422（仕様確定事項 #1）。"""
-        cid = seeded_db["q1_correct_choice_id"]
-        response = client.post("/api/answers", json={
+    # ---- 異常系: 422 ----
+
+    def test_missing_question_id_returns_422(self, client, seeded_db):
+        """question_id を省略すると 422。"""
+        res = client.post("/api/v1/answers", json={
+            "choice_id": seeded_db["q1_correct_choice_id"],
+        })
+        assert res.status_code == 422
+
+    def test_missing_choice_id_returns_422(self, client, seeded_db):
+        """choice_id を省略すると 422。"""
+        res = client.post("/api/v1/answers", json={
             "question_id": seeded_db["q1_id"],
-            "selected_choice_ids": [cid, cid],
         })
-        assert response.status_code == 422
+        assert res.status_code == 422
 
-    def test_insufficient_reject_mode(self, client, seeded_db, monkeypatch):
-        """INSUFFICIENT_SELECTION_MODE="reject": 「3つ選べ」で2つ選択 → 不正解として記録(200)。"""
-        monkeypatch.setattr(app.config, "INSUFFICIENT_SELECTION_MODE", "reject")
-        correct_ids = seeded_db["q3_correct_choice_ids"]
-        response = client.post("/api/answers", json={
-            "question_id": seeded_db["q3_id"],
-            "selected_choice_ids": correct_ids[:2],  # 3つ選べに対して2つだけ送る
+    def test_string_question_id_returns_422(self, client, seeded_db):
+        """question_id に文字列を渡すと 422。"""
+        res = client.post("/api/v1/answers", json={
+            "question_id": "abc",
+            "choice_id":   seeded_db["q1_correct_choice_id"],
         })
-        assert response.status_code == 200
-        assert response.json()["is_correct"] is False
+        assert res.status_code == 422
 
-    def test_insufficient_warn_mode_returns_422(self, client, seeded_db, monkeypatch):
-        """INSUFFICIENT_SELECTION_MODE="warn": 「3つ選べ」で2つ選択 → 422。"""
-        monkeypatch.setattr(app.config, "INSUFFICIENT_SELECTION_MODE", "warn")
-        correct_ids = seeded_db["q3_correct_choice_ids"]
-        response = client.post("/api/answers", json={
-            "question_id": seeded_db["q3_id"],
-            "selected_choice_ids": correct_ids[:2],
-        })
-        assert response.status_code == 422
-
-    def test_insufficient_warn_mode_no_record(self, client, db_session, seeded_db, monkeypatch):
-        """INSUFFICIENT_SELECTION_MODE="warn": 422 時は user_answers に記録しない。"""
-        monkeypatch.setattr(app.config, "INSUFFICIENT_SELECTION_MODE", "warn")
-        correct_ids = seeded_db["q3_correct_choice_ids"]
-        client.post("/api/answers", json={
-            "question_id": seeded_db["q3_id"],
-            "selected_choice_ids": correct_ids[:2],
-        })
-        # DB に記録されていないことを確認
-        count = db_session.query(UserAnswer).count()
-        assert count == 0
-
-
-class TestResetAnswers:
-    def test_delete_all_answers(self, client, seeded_db):
-        """DELETE /api/answers: 回答履歴が全件削除される。"""
-        # 先に回答を記録
-        client.post("/api/answers", json={
+    def test_string_choice_id_returns_422(self, client, seeded_db):
+        """choice_id に文字列を渡すと 422。"""
+        res = client.post("/api/v1/answers", json={
             "question_id": seeded_db["q1_id"],
-            "selected_choice_ids": [seeded_db["q1_correct_choice_id"]],
+            "choice_id":   "xyz",
         })
-        # リセット
-        response = client.delete("/api/answers")
-        assert response.status_code == 200
-        assert response.json()["deleted_count"] == 1
-
-
-class TestUserName:
-    """user_name フィールドのバリデーションと保存テスト。"""
-
-    def test_whitespace_only_returns_422(self, client, seeded_db):
-        """空白のみの user_name → 422。"""
-        response = client.post("/api/answers", json={
-            "question_id": seeded_db["q1_id"],
-            "selected_choice_ids": [seeded_db["q1_correct_choice_id"]],
-            "user_name": "   ",
-        })
-        assert response.status_code == 422
-
-    def test_username_is_stripped(self, client, db_session, seeded_db):
-        """前後の空白は strip されて保存される。"""
-        response = client.post("/api/answers", json={
-            "question_id": seeded_db["q1_id"],
-            "selected_choice_ids": [seeded_db["q1_correct_choice_id"]],
-            "user_name": "  alice  ",
-        })
-        assert response.status_code == 200
-        saved = db_session.query(UserAnswer).order_by(UserAnswer.id.desc()).first()
-        assert saved.user_name == "alice"
-
-    def test_default_username_is_guest(self, client, db_session, seeded_db):
-        """user_name 省略時は 'guest' として保存される（後方互換）。"""
-        client.post("/api/answers", json={
-            "question_id": seeded_db["q1_id"],
-            "selected_choice_ids": [seeded_db["q1_correct_choice_id"]],
-        })
-        saved = db_session.query(UserAnswer).order_by(UserAnswer.id.desc()).first()
-        assert saved.user_name == "guest"
-
-    def test_username_too_long_returns_422(self, client, seeded_db):
-        """51文字以上の user_name → 422。"""
-        response = client.post("/api/answers", json={
-            "question_id": seeded_db["q1_id"],
-            "selected_choice_ids": [seeded_db["q1_correct_choice_id"]],
-            "user_name": "a" * 51,
-        })
-        assert response.status_code == 422
+        assert res.status_code == 422

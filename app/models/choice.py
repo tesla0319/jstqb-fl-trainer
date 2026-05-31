@@ -5,13 +5,6 @@ from app.database import Base
 
 
 class Choice(Base):
-    """選択肢テーブル: 各問題の選択肢を格納する。
-
-    設計判断:
-    - display_order: 選択肢の表示順を固定する。ランダム化が必要になればロジックで対応
-    - question_id に INDEX: question_id で絞り込む JOIN クエリが多いため
-    """
-
     __tablename__ = "choices"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

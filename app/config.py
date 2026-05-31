@@ -1,33 +1,24 @@
-# アプリケーション全体の設定値を一元管理する
-# 閾値変更時はここだけ編集すればよい
-
 DATABASE_URL = "sqlite:///./app.db"
 
-# カテゴリ一覧: typo防止のため定数として管理し、seedとAPIでこの値を参照する
-# rev.4: DICTIONARY_VIEW → DATA_DICTIONARY に統合, DB_THEORY → RDB_THEORY に統合
-CATEGORIES = [
-    "VIEW",
-    "INDEX",
-    "MERGE",
-    "INTERSECT",
-    "SUBQUERY",
-    "CONSTRAINT",
-    "FUNCTION_NEST",
-    "ORACLE_TERM",
-    "JOIN",
-    "CORRELATED_SUBQUERY",
-    "DATA_DICTIONARY",
-    "INTERVAL",
-    "RDB_THEORY",
+# JSTQB FL カテゴリ定義（ID と名称のマスタ）
+JSTQB_CATEGORIES = [
+    {"id": 1, "name": "テストの基礎"},
+    {"id": 2, "name": "テスト活動とプロセス"},
+    {"id": 3, "name": "静的テスト"},
+    {"id": 4, "name": "テスト技法"},
+    {"id": 5, "name": "テストマネジメント"},
+    {"id": 6, "name": "ツール支援"},
 ]
 
-# 苦手判定の正答率閾値: この値未満かつ MIN_ANSWERS 以上回答したカテゴリを苦手とみなす
-WEAK_THRESHOLD = 0.5
+# 後方互換: stats 等が参照するカテゴリ名リスト
+CATEGORIES = [c["name"] for c in JSTQB_CATEGORIES]
 
-# 苦手判定に必要な最低回答数: 回答数が少ないと正答率が安定しないため下限を設ける
+# 問題取得のデフォルト件数
+DEFAULT_QUESTION_LIMIT = 10
+
+# 苦手判定の正答率閾値（stats 機能で使用）
+WEAK_THRESHOLD = 0.5
 MIN_ANSWERS = 3
 
-# 選択数不一致時の挙動:
-#   "reject": 不正解として記録（MVPデフォルト、本番試験耐性を鍛える）
-#   "warn"  : 422 を返し記録しない（Phase2 想定、学習初期の再選択促し）
+# 選択数不一致時の挙動（既存複数選択ロジック用、Phase 1 では実質不使用）
 INSUFFICIENT_SELECTION_MODE = "reject"

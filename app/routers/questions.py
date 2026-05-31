@@ -1,4 +1,8 @@
-"""問題取得 API エンドポイント。"""
+"""問題取得 API エンドポイント。
+
+router       : /api/v1/questions  （JSTQB FL 新 API）
+legacy_router: /api/questions     （旧 SQL Silver API、後方互換で維持）
+"""
 
 import random
 from typing import Literal
@@ -9,15 +13,67 @@ from sqlalchemy.orm import Session
 from app import config
 from app.crud.question import (
     get_question_by_id,
+    get_questions,
     get_random_question,
     get_wrong_question_ids,
 )
 from app.crud.stats import get_category_stats
 from app.database import get_db
-from app.schemas.question import QuestionResponse
+from app.schemas.question import LegacyQuestionResponse, QuestionsListResponse
 from app.services.stats import CategoryStat, compute_accuracy, get_weak_categories
 
-router = APIRouter(prefix="/api/questions", tags=["questions"])
+# ── JSTQB FL 新 API ────────────────────────────────────────────────
+
+router = APIRouter(prefix="/api/v1/questions", tags=["questions"])
+
+
+@router.get("", response_model=QuestionsListResponse)
+def list_questions(
+    category_id: int | None = Query(default=None),
+    random: bool = Query(default=False),
+    limit: int = Query(default=config.DEFAULT_QUESTION_LIMIT, ge=1),
+    db: Session = Depends(get_db),
+):
+    """問題一覧を取得する。
+
+    - random=true のとき limit を無視して1問をランダムに返す。
+    - category_id 指定時は config から名称を引いてカテゴリで絞り込む。
+    - 対象問題が0件の場合は {"questions": []} を返す（404 ではない）。
+    """
+    category_name = _resolve_category_name(category_id)
+    if category_id is not None and category_name is None:
+        # config に存在しない category_id → 0件
+        return QuestionsListResponse(questions=[])
+
+    if random:
+        question = get_random_question(db, category=category_name)
+        questions = [question] if question else []
+    else:
+        questions = get_questions(db, category=category_name, limit=limit)
+
+    return QuestionsListResponse(questions=questions)
+
+
+@router.get("/{question_id}", response_model=QuestionsListResponse)
+def get_question(question_id: int, db: Session = Depends(get_db)):
+    """問題を1件取得する。存在しない場合は 404 を返す。"""
+    question = get_question_by_id(db, question_id)
+    if question is None:
+        raise HTTPException(status_code=404, detail="Question not found")
+    return QuestionsListResponse(questions=[question])
+
+
+def _resolve_category_name(category_id: int | None) -> str | None:
+    """category_id を config のカテゴリ名に変換する。見つからない場合は None。"""
+    if category_id is None:
+        return None
+    cat_map = {c["id"]: c["name"] for c in config.JSTQB_CATEGORIES}
+    return cat_map.get(category_id)
+
+
+# ── 旧 SQL Silver API（後方互換、未使用のまま維持） ────────────────
+
+legacy_router = APIRouter(prefix="/api/questions", tags=["questions-legacy"])
 
 
 def _random_with_fallback(
@@ -27,13 +83,6 @@ def _random_with_fallback(
     exclude_ids: list[int],
     excluded_categories: list[str] | None = None,
 ):
-    """exclude_ids / excluded_categories を適用してランダム取得。候補が尽きた段階的フォールバック。
-
-    フォールバック順:
-      1. 両方の除外を適用して取得
-      2. exclude_ids を外してリトライ（出題済みID除外が原因の場合）
-      3. excluded_categories を外してリトライ（カテゴリ全除外が原因の場合）
-    """
     question = get_random_question(
         db, category=category,
         exclude_ids=exclude_ids or None,
@@ -54,7 +103,7 @@ def _random_with_fallback(
     return question
 
 
-@router.get("/random", response_model=QuestionResponse)
+@legacy_router.get("/random", response_model=LegacyQuestionResponse)
 def random_question(
     mode: Literal["normal", "weak", "review"] = "normal",
     category: str | None = None,
@@ -63,30 +112,14 @@ def random_question(
     excluded_categories: list[str] = Query(default=[]),
     db: Session = Depends(get_db),
 ):
-    """ランダムに1問取得する。
-
-    mode:
-      "normal": 全問題（またはcategory指定）からランダム出題
-      "weak"  : 苦手カテゴリから出題（user_name 単位）。苦手なし → 通常モードにフォールバック
-      "review": 最直近の回答が不正解の問題から出題（user_name 単位）。対象なし → 通常モードにフォールバック
-
-    exclude_ids:
-      フロントエンドがセッション中に出題済みの question_id を送信する。
-      該当問題を除いてランダム選択する。全問除外された場合はフォールバックして返す。
-
-    excluded_categories:
-      10問セッションで同カテゴリ集中を抑制するための除外カテゴリリスト（normal モード専用）。
-      全カテゴリ除外になった場合はフォールバックして返す。
-    """
+    """ランダムに1問取得する（旧 API）。"""
     question = None
 
     if mode == "weak":
         question = _resolve_weak(db, exclude_ids, user_name=user_name)
-
     elif mode == "review":
         question = _resolve_review(db, exclude_ids, user_name=user_name)
 
-    # normal または上記モードがフォールバックした場合
     if question is None:
         question = _random_with_fallback(
             db, category=category, exclude_ids=exclude_ids,
@@ -100,7 +133,6 @@ def random_question(
 
 
 def _resolve_weak(db: Session, exclude_ids: list[int], user_name: str = "guest"):
-    """苦手カテゴリから問題を選ぶ（user_name 単位）。苦手カテゴリなし → None を返しフォールバックさせる。"""
     raw_stats = get_category_stats(db, user_name=user_name)
     stats = [
         CategoryStat(
@@ -117,28 +149,18 @@ def _resolve_weak(db: Session, exclude_ids: list[int], user_name: str = "guest")
         min_answers=config.MIN_ANSWERS,
     )
     if not weak_cats:
-        return None  # フォールバックを呼び出し側に委ねる
-
+        return None
     target_category = random.choice(weak_cats)
     return _random_with_fallback(db, category=target_category, exclude_ids=exclude_ids)
 
 
 def _resolve_review(db: Session, exclude_ids: list[int], user_name: str = "guest"):
-    """最直近が不正解の問題から選ぶ（user_name 単位）。対象なし → None を返しフォールバックさせる。
-
-    exclude_ids で全ての復習候補が尽きた場合は、除外を無視して復習候補から選び直す
-    （セッションリセットをフロントエンドに検知させる）。
-    """
     wrong_ids = get_wrong_question_ids(db, user_name=user_name)
     if not wrong_ids:
-        return None  # 間違い問題なし → 通常モードにフォールバック
-
+        return None
     exclude_set = set(exclude_ids)
     candidates = [qid for qid in wrong_ids if qid not in exclude_set]
-
     if not candidates:
-        # セッション内で全復習問題を消化 → 復習候補全体からリセット
         candidates = wrong_ids
-
     chosen_id = random.choice(candidates)
     return get_question_by_id(db, chosen_id)

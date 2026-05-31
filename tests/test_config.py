@@ -1,26 +1,24 @@
-"""
-config.py の整合性テスト。
+"""config.py の整合性テスト。"""
 
-カテゴリ整理(統合・追加・削除)の作業ミスを機械的に検出する。
-rev.4 のカテゴリ整理で追加された再発防止テスト。
-"""
-
-from app.config import CATEGORIES
-
-# rev.4 で廃止されたカテゴリ
-DEPRECATED_CATEGORIES = {"DICTIONARY_VIEW", "DB_THEORY"}
-
-
-def test_no_deprecated_categories():
-    """廃止されたカテゴリが config.CATEGORIES に残っていないこと。"""
-    leftover = DEPRECATED_CATEGORIES & set(CATEGORIES)
-    assert not leftover, f"廃止カテゴリが残存しています: {leftover}"
+from app.config import CATEGORIES, JSTQB_CATEGORIES
 
 
 def test_categories_unique():
     """CATEGORIES に重複がないこと。"""
     assert len(CATEGORIES) == len(set(CATEGORIES)), \
         f"CATEGORIES に重複があります: {CATEGORIES}"
+
+
+def test_jstqb_categories_count():
+    """JSTQB_CATEGORIES が6件であること。"""
+    assert len(JSTQB_CATEGORIES) == 6
+
+
+def test_jstqb_categories_have_id_and_name():
+    """各カテゴリに id と name があること。"""
+    for cat in JSTQB_CATEGORIES:
+        assert "id" in cat
+        assert "name" in cat
 
 
 def test_sample_questions_use_valid_categories():
