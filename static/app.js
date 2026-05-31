@@ -282,7 +282,8 @@ function renderQuestion() {
 
   const choicesEl = el('choices');
   choicesEl.textContent = '';
-  q.choices.forEach(c => choicesEl.appendChild(buildChoiceEl(c.id, c.choice_text)));
+  const shuffled = [...q.choices].sort(() => Math.random() - 0.5);
+  shuffled.forEach(c => choicesEl.appendChild(buildChoiceEl(c.id, c.choice_text)));
 
   el('question-card').hidden = false;
   updateSubmitButton();
