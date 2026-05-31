@@ -14,7 +14,7 @@ JSTQB_CATEGORIES = [
 CATEGORIES = [c["name"] for c in JSTQB_CATEGORIES]
 
 # 問題取得のデフォルト件数
-DEFAULT_QUESTION_LIMIT = 10
+DEFAULT_QUESTION_LIMIT = 40
 
 # 苦手判定の正答率閾値（stats 機能で使用）
 WEAK_THRESHOLD = 0.5

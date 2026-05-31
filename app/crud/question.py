@@ -14,7 +14,7 @@ from app.models.user_answer import UserAnswer
 def get_questions(
     db: Session,
     category: str | None = None,
-    limit: int = 10,
+    limit: int = 40,
 ) -> list[Question]:
     """問題一覧を取得する（JSTQB FL /api/v1/questions 用）。"""
     query = db.query(Question)

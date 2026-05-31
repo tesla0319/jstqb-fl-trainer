@@ -34,13 +34,13 @@ const state = {
 
   view: 'quiz',  // 'quiz' | 'result' | 'stats' | 'training-result'
 
-  // 10問トレーニング セッション状態
-  trainingCount:     0,   // 現セッションの回答数 (0–10)
+  // 40問トレーニング セッション状態
+  trainingCount:     0,   // 現セッションの回答数 (0–40)
   trainingCorrect:   0,   // 正答数
-  trainingLog:       [],  // [{category, is_correct}, ...] 直近10問（テーマ判定に使用）
+  trainingLog:       [],  // [{category, is_correct}, ...] 直近40問（テーマ判定に使用）
   trainingCatCounts: {},  // normal mode 偏り抑制: { 'VIEW': 2, ... }
   trainingLastCats:  [],  // 3連続チェック用: 直近2カテゴリ
-  trainingFinished:  false, // 10問完了フラグ（btn-next の動作切替に使用）
+  trainingFinished:  false, // 40問完了フラグ（btn-next の動作切替に使用）
 };
 
 /* ==========================================================
@@ -342,7 +342,7 @@ function renderResult(result) {
 }
 
 /* ==========================================================
-   10問トレーニング制御
+   40問トレーニング制御
    ========================================================== */
 function updateTrainingState(is_correct) {
   const cat = state.question.category_name;
@@ -350,9 +350,9 @@ function updateTrainingState(is_correct) {
   state.trainingCount++;
   if (is_correct) state.trainingCorrect++;
 
-  // trainingLog: 直近10問を常に保持（テーマ判定用）
+  // trainingLog: 直近40問を常に保持（テーマ判定用）
   state.trainingLog.push({ category: cat, is_correct });
-  if (state.trainingLog.length > 10) state.trainingLog.shift();
+  if (state.trainingLog.length > 40) state.trainingLog.shift();
 
   // normal mode: カテゴリ偏り抑制のための追跡
   if (state.mode === 'normal') {
@@ -361,7 +361,7 @@ function updateTrainingState(is_correct) {
     if (state.trainingLastCats.length > 2) state.trainingLastCats.shift();
   }
 
-  if (state.trainingCount >= 10) {
+  if (state.trainingCount >= 40) {
     state.trainingFinished = true;
     el('btn-next').textContent = '結果を見る';
   }
@@ -492,8 +492,8 @@ function updateThemeFromTraining() {
   const log = state.trainingLog;
   if (log.length === 0) return;
   const acc = log.filter(r => r.is_correct).length / log.length;
-  if      (acc < 0.40)  applyTheme('dark');    // 直近10問が40%未満 → dark
-  else if (acc >= 0.70) applyTheme('normal');  // 直近10問が70%以上 → normal
+  if      (acc < 0.40)  applyTheme('dark');    // 直近40問が40%未満 → dark
+  else if (acc >= 0.70) applyTheme('normal');  // 直近40問が70%以上 → normal
   // 40〜69%: 現在テーマ維持（ヒステリシス）
 }
 
