@@ -1630,7 +1630,7 @@ SAMPLE_QUESTIONS: list[dict] = [
         "trap_reason": None,
         "choices": [
             {"choice_text": "テスト実行環境を準備する",                                                             "is_correct": False, "display_order": 1},
-            {"choice_text": "状態・イベント・遷移・ガード条件を整理した状態遷移図または状態遷移表を作成する",         "is_correct": True,  "display_order": 2},
+            {"choice_text": "システムの取り得る状態と状態変化の条件を図表として整理する",                         "is_correct": True,  "display_order": 2},
             {"choice_text": "境界値となる注文金額を洗い出す",                                                       "is_correct": False, "display_order": 3},
             {"choice_text": "キャンセル機能のソースコードを読む",                                                   "is_correct": False, "display_order": 4},
         ],
@@ -1844,10 +1844,10 @@ SAMPLE_QUESTIONS: list[dict] = [
         ),
         "trap_reason": None,
         "choices": [
-            {"choice_text": "テスト担当者の年齢と在籍年数",                                                                   "is_correct": False, "display_order": 1},
+            {"choice_text": "テスト担当者の現在の作業負荷と稼働状況",                                                       "is_correct": False, "display_order": 1},
             {"choice_text": "テスト担当者のスキル・経験・得意領域と、タスクの難易度・性質の適合性",                           "is_correct": True,  "display_order": 2},
-            {"choice_text": "テスト担当者のデスクの位置",                                                                     "is_correct": False, "display_order": 3},
-            {"choice_text": "テストの実施順番のみ（早いもの勝ちで割り当てる）",                                               "is_correct": False, "display_order": 4},
+            {"choice_text": "テスト担当者の過去の欠陥発見実績",                                                               "is_correct": False, "display_order": 3},
+            {"choice_text": "テスト担当者の業務経験年数",                                                                     "is_correct": False, "display_order": 4},
         ],
     },
     {   # Q74 (MD第72問)
