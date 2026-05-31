@@ -3,7 +3,7 @@
 DB 不要。Python リストを直接検証する。
 
 仕様書 §4.3 / §6.2 の要件:
-  - 全10問
+  - 全82問
   - 全6カテゴリを最低1問カバー
   - 全問単一選択（multi_select_count=1）
   - 全問で is_correct=True の選択肢が必ず1件だけ存在する
@@ -19,9 +19,9 @@ EXPECTED_CATEGORY_NAMES = {c["name"] for c in JSTQB_CATEGORIES}
 class TestSeedCoverage:
 
     def test_total_question_count(self):
-        """Phase 1 + MD追加: 42問。"""
-        assert len(SAMPLE_QUESTIONS) == 42, (
-            f"問題数: {len(SAMPLE_QUESTIONS)} (42問必要)"
+        """Phase 1 + MD追加: 82問。"""
+        assert len(SAMPLE_QUESTIONS) == 82, (
+            f"問題数: {len(SAMPLE_QUESTIONS)} (82問必要)"
         )
 
     def test_all_categories_covered(self):
@@ -110,12 +110,12 @@ class TestSeedCoverage:
     def test_category_distribution(self):
         """各カテゴリの問題数が仕様に合致する。"""
         expected = {
-            "テストの基礎": 11,
-            "テスト活動とプロセス": 10,
-            "静的テスト": 3,
-            "テスト技法": 7,
-            "テストマネジメント": 9,
-            "ツール支援": 2,
+            "テストの基礎": 18,
+            "テスト活動とプロセス": 17,
+            "静的テスト": 9,
+            "テスト技法": 15,
+            "テストマネジメント": 16,
+            "ツール支援": 7,
         }
         actual = {}
         for q in SAMPLE_QUESTIONS:
