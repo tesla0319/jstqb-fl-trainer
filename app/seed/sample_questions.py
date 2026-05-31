@@ -1080,7 +1080,7 @@ SAMPLE_QUESTIONS: list[dict] = [
         "trap_reason": None,
         "choices": [
             {"choice_text": "すべての欠陥を自動的に発見できる",                              "is_correct": False, "display_order": 1},
-            {"choice_text": "反復実行（回帰テスト等）の効率化と一貫性のあるテスト実行を実現できる", "is_correct": True,  "display_order": 2},
+            {"choice_text": "反復実行の効率化と一貫性のあるテスト実行を実現できる", "is_correct": True,  "display_order": 2},
             {"choice_text": "テストケース設計の作業を不要にできる",                           "is_correct": False, "display_order": 3},
             {"choice_text": "テストの意思決定をツールに委任できる",                           "is_correct": False, "display_order": 4},
         ],
@@ -1222,7 +1222,7 @@ SAMPLE_QUESTIONS: list[dict] = [
         "choices": [
             {"choice_text": "テストを繰り返すほど欠陥発見率が上がるため、同じテストを継続することが最善策である", "is_correct": False, "display_order": 1},
             {"choice_text": "テスト担当者の習熟度が上がったため欠陥が発見されなくなったと判断してよい",         "is_correct": False, "display_order": 2},
-            {"choice_text": "同じテストを繰り返すとテストが新しい欠陥を見つける効果が下がる（テストの弱化）",    "is_correct": True,  "display_order": 3},
+            {"choice_text": "同じテストを繰り返すとテストが新しい欠陥を見つける効果が下がる",                  "is_correct": True,  "display_order": 3},
             {"choice_text": "テストは均等に全機能へ配分するべきである",                                        "is_correct": False, "display_order": 4},
         ],
     },
