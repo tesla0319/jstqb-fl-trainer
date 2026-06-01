@@ -19,9 +19,9 @@ EXPECTED_CATEGORY_NAMES = {c["name"] for c in JSTQB_CATEGORIES}
 class TestSeedCoverage:
 
     def test_total_question_count(self):
-        """Phase 1 + MD追加: 82問。"""
-        assert len(SAMPLE_QUESTIONS) == 82, (
-            f"問題数: {len(SAMPLE_QUESTIONS)} (82問必要)"
+        """Phase 1 + MD追加: 122問。"""
+        assert len(SAMPLE_QUESTIONS) == 122, (
+            f"問題数: {len(SAMPLE_QUESTIONS)} (122問必要)"
         )
 
     def test_all_categories_covered(self):
@@ -110,12 +110,12 @@ class TestSeedCoverage:
     def test_category_distribution(self):
         """各カテゴリの問題数が仕様に合致する。"""
         expected = {
-            "テストの基礎": 18,
-            "テスト活動とプロセス": 17,
-            "静的テスト": 9,
-            "テスト技法": 15,
-            "テストマネジメント": 16,
-            "ツール支援": 7,
+            "テストの基礎": 25,
+            "テスト活動とプロセス": 24,
+            "静的テスト": 15,
+            "テスト技法": 22,
+            "テストマネジメント": 23,
+            "ツール支援": 13,
         }
         actual = {}
         for q in SAMPLE_QUESTIONS:
