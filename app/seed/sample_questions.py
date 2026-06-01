@@ -1605,7 +1605,7 @@ SAMPLE_QUESTIONS: list[dict] = [
         "trap_reason": None,
         "choices": [
             {"choice_text": "500ポイント、2500ポイント、7500ポイント",                     "is_correct": False, "display_order": 1},
-            {"choice_text": "0、999、1000、4999、5000、5001ポイント（および上限付近の値）", "is_correct": True,  "display_order": 2},
+            {"choice_text": "0、999、1000、4999、5000、5001ポイント",                        "is_correct": True,  "display_order": 2},
             {"choice_text": "1000ポイント、5000ポイントのみ",                              "is_correct": False, "display_order": 3},
             {"choice_text": "0ポイント、5000ポイント、10000ポイント",                       "is_correct": False, "display_order": 4},
         ],
@@ -1982,14 +1982,15 @@ SAMPLE_QUESTIONS: list[dict] = [
             "静的解析ツールはソースコードを実行せずに解析するツールであり、"
             "コーディング規約違反・未使用変数・Null参照の可能性・SQLインジェクション等のセキュリティ脆弱性パターン・複雑度の高いコードなどを自動的に検出する。"
             "CIパイプラインに組み込むことで、コードのコミット時に自動的に検査が走り、問題の早期発見につながる。"
-            "ソフトウェアの実行・性能測定・ログ監視はいずれも動的なツールの役割である。"
+            "カバレッジ計測ツールはテスト実行中のコード実行率を測定するツール、"
+            "CIツールはビルド・テスト実行の自動化基盤であり、静的解析ツールとは役割が異なる。"
         ),
         "trap_reason": None,
         "choices": [
-            {"choice_text": "ソフトウェアを実行して性能を測定する",                                                       "is_correct": False, "display_order": 1},
-            {"choice_text": "コードを実行せずに、コーディング規約違反・潜在的なバグ・セキュリティ上の問題などを自動的に検出する", "is_correct": True,  "display_order": 2},
-            {"choice_text": "テストケースを自動生成して実行する",                                                         "is_correct": False, "display_order": 3},
-            {"choice_text": "本番環境のログをリアルタイムで監視する",                                                     "is_correct": False, "display_order": 4},
+            {"choice_text": "テストケースの実行結果を収集してカバレッジを測定する",       "is_correct": False, "display_order": 1},
+            {"choice_text": "ソースコードレビューを会議形式で実施する",                   "is_correct": False, "display_order": 2},
+            {"choice_text": "コードを実行せずに規約違反や潜在欠陥を検出する",             "is_correct": True,  "display_order": 3},
+            {"choice_text": "CIパイプライン上でビルド成否を管理する",                     "is_correct": False, "display_order": 4},
         ],
     },
     {   # Q80 (MD第78問)
@@ -2598,7 +2599,7 @@ SAMPLE_QUESTIONS: list[dict] = [
         "trap_reason": None,
         "choices": [
             {"choice_text": "修正内容はレビューアには確認させず、作成者の判断で完了とする",                                         "is_correct": False, "display_order": 1},
-            {"choice_text": "修正内容が指摘事項を適切に解決しているかをレビューアまたはモデレータが確認する（フォローアップ）", "is_correct": True,  "display_order": 2},
+            {"choice_text": "修正内容が指摘事項を適切に解決しているかをレビューアまたはモデレータが確認する",                 "is_correct": True,  "display_order": 2},
             {"choice_text": "修正後は必ず最初からレビューを全て再実施する",                                                         "is_correct": False, "display_order": 3},
             {"choice_text": "修正内容の確認は次のプロジェクトで実施する",                                                           "is_correct": False, "display_order": 4},
         ],
@@ -2818,7 +2819,7 @@ SAMPLE_QUESTIONS: list[dict] = [
             "あるECサイトの開発プロジェクトでは、テストマネージャが以下のテストメトリクスを収集している。\n\n"
             "・テストケース実行率：160/200件 = 80%\n"
             "・テストケース合格率：145/160件 = 90.6%\n"
-            "・未解決欠陥数：12件（重大度高3件・中6件・低3件）\n"
+            "・未解決欠陥数：12件（重大度高3件・重大度中6件・重大度低3件）\n"
             "・欠陥検出率（全欠陥中テストで発見した割合）：85%\n\n"
             "「テストの進捗を把握する」目的に最も適したメトリクスはどれか。"
         ),
@@ -2931,15 +2932,14 @@ SAMPLE_QUESTIONS: list[dict] = [
             "テスト独立性を高めることのデメリットとして JSTQB FL は以下を挙げている。\n"
             "開発担当者とテスト担当者間のコミュニケーションコスト・調整コストが増加する。\n"
             "開発担当者が「テストは別の人がやるもの」と考え、自身の品質への責任意識が低下するリスクがある。\n"
-            "外部のテスト担当者はシステムの背景・コンテキストの把握に時間がかかる。\n"
-            "選択肢A・B・D はテスト独立性のメリットの説明である。"
+            "外部のテスト担当者はシステムの背景・コンテキストの把握に時間がかかる。"
         ),
         "trap_reason": None,
         "choices": [
-            {"choice_text": "開発担当者の思い込みに引きずられず、客観的に欠陥を発見できる",                                                                        "is_correct": False, "display_order": 1},
-            {"choice_text": "外部のテスト担当者は知識・経験が豊富なため、テストの質が向上する",                                                                    "is_correct": False, "display_order": 2},
-            {"choice_text": "開発担当者とテスト担当者間のコミュニケーションコストが増加し、開発担当者が品質への責任意識を持ちにくくなるリスクがある", "is_correct": True,  "display_order": 3},
-            {"choice_text": "テスト担当者がシステムの詳細を把握できるため、効率的にテストできる",                                                                  "is_correct": False, "display_order": 4},
+            {"choice_text": "開発担当者とテスト担当者間のコミュニケーションコストが増加し、開発担当者が品質への責任意識を持ちにくくなるリスクがある", "is_correct": True,  "display_order": 1},
+            {"choice_text": "テスト担当者が対象システムの業務知識を十分に理解するまで時間がかかる場合がある",                                              "is_correct": False, "display_order": 2},
+            {"choice_text": "テスト担当者が開発状況を把握しづらく、情報共有の工数が増える場合がある",                                                        "is_correct": False, "display_order": 3},
+            {"choice_text": "外部テスト会社との契約・調整に追加コストが発生する場合がある",                                                                  "is_correct": False, "display_order": 4},
         ],
     },
 
@@ -2954,7 +2954,7 @@ SAMPLE_QUESTIONS: list[dict] = [
         ),
         "multi_select_count": 1,
         "explanation": (
-            "JSTQB FL のテストの原則のひとつに「欠陥クラスタリング」がある。"
+            "JSTQB FL のテストの原則のひとつに「欠陥の偏在」がある。"
             "欠陥は均一に分散せず、特定のモジュール・コンポーネント・機能に集中する傾向がある。"
             "この原則はリスクベースドテストの根拠のひとつであり、"
             "過去に欠陥が多かった領域・複雑な領域・最近変更された領域に"
@@ -2963,7 +2963,7 @@ SAMPLE_QUESTIONS: list[dict] = [
         "trap_reason": None,
         "choices": [
             {"choice_text": "テストの弱化：同じテストを繰り返したため欠陥発見率が低下した",                           "is_correct": False, "display_order": 1},
-            {"choice_text": "欠陥クラスタリング：欠陥は少数のモジュールに集中する傾向がある",                         "is_correct": True,  "display_order": 2},
+            {"choice_text": "欠陥の偏在：欠陥は少数のモジュールに集中する傾向がある",                             "is_correct": True,  "display_order": 2},
             {"choice_text": "コンテキスト依存：プロジェクトの状況によってテストアプローチは異なる",                   "is_correct": False, "display_order": 3},
             {"choice_text": "早期テスト：欠陥は早期に発見するほど修正コストが低い",                                   "is_correct": False, "display_order": 4},
         ],
@@ -3034,7 +3034,7 @@ SAMPLE_QUESTIONS: list[dict] = [
         ),
         "multi_select_count": 1,
         "explanation": (
-            "欠陥管理ツールの主なメリットは「欠陥のライフサイクル管理」「状況の可視化」"
+            "欠陥管理ツールの主なメリットは「欠陥のライフサイクル管理（発見→登録→割り当て→修正→確認→クローズ）」「状況の可視化」"
             "「担当者間の情報共有」「トレーサビリティの確保（テストケース・要件との紐付け）」"
             "「傾向分析（欠陥の多いモジュール・時期の把握）」などである。"
             "ツール自体が欠陥を修正・検出する機能はなく、"
@@ -3042,8 +3042,8 @@ SAMPLE_QUESTIONS: list[dict] = [
         ),
         "trap_reason": None,
         "choices": [
-            {"choice_text": "欠陥管理ツールがあれば欠陥は自動的に修正される",                                                                                          "is_correct": False, "display_order": 1},
-            {"choice_text": "欠陥のライフサイクル（発見→登録→割り当て→修正→確認→クローズ）を追跡・管理でき、状況の可視化とトレーサビリティを確保できる", "is_correct": True,  "display_order": 2},
+            {"choice_text": "欠陥管理ツールがあれば欠陥は自動的に修正される",                                        "is_correct": False, "display_order": 1},
+            {"choice_text": "欠陥のライフサイクルを追跡・管理でき、状況の可視化とトレーサビリティを確保できる", "is_correct": True,  "display_order": 2},
             {"choice_text": "欠陥管理ツールを導入すればテスト担当者は欠陥レポートを書く必要がなくなる",                                                            "is_correct": False, "display_order": 3},
             {"choice_text": "欠陥管理ツールはソースコードの欠陥を自動検出する",                                                                                      "is_correct": False, "display_order": 4},
         ],
@@ -3350,10 +3350,10 @@ SAMPLE_QUESTIONS: list[dict] = [
         ),
         "trap_reason": None,
         "choices": [
-            {"choice_text": "テストケースの実行を高速化するため",                                                                                   "is_correct": False, "display_order": 1},
+            {"choice_text": "テストケースの保守性や可読性を向上させるため",                                                                         "is_correct": False, "display_order": 1},
             {"choice_text": "テストケースの観点漏れ・期待結果の不備・テスト条件との不一致を発見し、テストの有効性を高めるため", "is_correct": True,  "display_order": 2},
-            {"choice_text": "テストケースの数を増やすため",                                                                                         "is_correct": False, "display_order": 3},
-            {"choice_text": "テストの自動化スクリプトを生成するため",                                                                               "is_correct": False, "display_order": 4},
+            {"choice_text": "テストケースの標準準拠を確認するため",                                                                                 "is_correct": False, "display_order": 3},
+            {"choice_text": "テスト設計者間で知識共有を行うため",                                                                                   "is_correct": False, "display_order": 4},
         ],
     },
 
@@ -4050,7 +4050,7 @@ SAMPLE_QUESTIONS: list[dict] = [
         "trap_reason": None,
         "choices": [
             {"choice_text": "自動化ツールの種類が多すぎるから",                                                                                           "is_correct": False, "display_order": 1},
-            {"choice_text": "自動化に適していないテスト（頻繁に変わる仕様・判断が必要なテスト）を対象にした、または保守コストを考慮していなかった", "is_correct": True,  "display_order": 2},
+            {"choice_text": "自動化に適していないテストを対象にした、または保守コストを考慮していなかった",                                         "is_correct": True,  "display_order": 2},
             {"choice_text": "テスト担当者の人数が多すぎるから",                                                                                           "is_correct": False, "display_order": 3},
             {"choice_text": "自動化ツールは6か月では効果が出ないため、3年以上待つ必要がある",                                                            "is_correct": False, "display_order": 4},
         ],
@@ -4206,14 +4206,16 @@ SAMPLE_QUESTIONS: list[dict] = [
             "「チームのスキルや文化を考慮せず、習熟期間を設けない」"
             "「パイロット導入なしに一気に全面展開する」などである。"
             "ツールはあくまで手段であり、先にプロセス・目的・チームの準備を整えることが"
-            "成功の前提条件となる。"
+            "成功の前提条件となる。\n"
+            "選択肢A（習熟時間）・C（コスト超過）・D（工数不足）は導入過程で生じる副次的な問題であり、"
+            "JSTQBシラバスが導入失敗の主因として挙げるプロセス不適合・目的合意の欠如（B）とは性質が異なる。"
         ),
         "trap_reason": None,
         "choices": [
-            {"choice_text": "ツールの機能が多すぎること",                                                                                                                 "is_correct": False, "display_order": 1},
+            {"choice_text": "ツールが多機能であったため、チームが使いこなすまでに想定以上の習熟時間がかかったこと",                                                           "is_correct": False, "display_order": 1},
             {"choice_text": "チームのプロセスや文化にツールを合わせず、ツールの機能に合わせてプロセスを変えようとしたこと、または導入目的・期待効果の合意なしに展開したこと", "is_correct": True,  "display_order": 2},
-            {"choice_text": "ツールの価格が高すぎること",                                                                                                                 "is_correct": False, "display_order": 3},
-            {"choice_text": "ツール導入の担当者が1人だったこと",                                                                                                         "is_correct": False, "display_order": 4},
+            {"choice_text": "ツールのライセンスコストが当初の見積もりを超え、追加予算の確保が必要になったこと",                                                             "is_correct": False, "display_order": 3},
+            {"choice_text": "ツール導入を主導するメンバーの工数が不足し、通常業務と並行して対応せざるを得なかったこと",                                                     "is_correct": False, "display_order": 4},
         ],
     },
 ]
